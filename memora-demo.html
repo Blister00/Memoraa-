@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Memora — Event Photo Sharing</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d1a;
+    --surface: #13132a;
+    --card: #1a1a35;
+    --border: #2a2a50;
+    --gold: #e8c97a;
+    --gold-dim: #b89a4a;
+    --text: #f0ece0;
+    --muted: #8a8aaa;
+    --accent: #7b6ef6;
+    --danger: #e05c5c;
+    --success: #5ce08a;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lato', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Phone shell */
+  #shell {
+    max-width: 390px;
+    min-height: 100vh;
+    margin: 0 auto;
+    position: relative;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  /* Ambient glow */
+  #shell::before {
+    content: '';
+    position: fixed;
+    top: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    background: rgba(232,201,122,0.06);
+    filter: blur(60px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Screens */
+  .screen { display: none; flex-direction: column; min-height: 100vh; position: relative; z-index: 1; animation: fadeIn 0.25s ease; }
+  .screen.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Typography */
+  .display { font-family: 'Cormorant Garamond', serif; }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 20px;
+    flex-shrink: 0;
+  }
+  .header-row { display: flex; justify-content: space-between; align-items: center; }
+  .logo { font-family: 'Cormorant Garamond', serif; font-size: 30px; color: var(--gold); line-height: 1; }
+  .logo-sub { color: var(--muted); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+
+  /* Badge */
+  .badge {
+    background: rgba(232,201,122,0.15);
+    color: var(--gold);
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+    display: inline-block;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer;
+    font-family: 'Cormorant Garamond', serif; font-size: 15px; font-weight: 600;
+    letter-spacing: 0.04em; transition: all 0.18s; text-decoration: none;
+  }
+  .btn-primary { background: var(--gold); color: #0d0d1a; }
+  .btn-primary:hover { background: #f0d88a; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 8px; }
+  .btn-full { width: 100%; padding: 14px; font-size: 16px; }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(224,92,92,0.3); border-radius: 8px; padding: 8px 18px; cursor: pointer; font-size: 13px; }
+
+  /* Inputs */
+  .input {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 11px 14px; color: var(--text); font-family: 'Lato', sans-serif;
+    font-size: 14px; width: 100%; outline: none; transition: border-color 0.15s;
+  }
+  .input:focus { border-color: var(--gold); }
+  .input::placeholder { color: var(--muted); }
+  textarea.input { min-height: 80px; resize: vertical; }
+  select.input { appearance: none; cursor: pointer; }
+
+  .label { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; display: block; }
+  .field { margin-bottom: 16px; }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .tab { flex: 1; padding: 14px 0; background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-family: 'Cormorant Garamond', serif; font-size: 15px; cursor: pointer; transition: all 0.15s; }
+  .tab.active { border-bottom-color: var(--gold); color: var(--gold); }
+
+  /* Scroll content */
+  .scroll-content { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 100px; }
+
+  /* Event action buttons */
+  .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+  /* FAB */
+  .fab {
+    position: fixed; bottom: 84px; right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--gold); border: none; font-size: 28px;
+    cursor: pointer; box-shadow: 0 0 24px rgba(232,201,122,0.4);
+    display: flex; align-items: center; justify-content: center;
+    color: #0d0d1a; z-index: 50; transition: transform 0.15s;
+  }
+  .fab:hover { transform: scale(1.08); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    z-index: 200; display: none; align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet {
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    padding: 24px; width: 100%; max-height: 88vh; overflow-y: auto;
+    animation: slideUp 0.28s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+  .modal-title { font-family: 'Cormorant Garamond', serif; color: var(--gold); font-size: 24px; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; }
+
+  /* QR Modal (centered) */
+  .qr-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+    z-index: 300; display: none; align-items: center; justify-content: center; padding: 24px;
+  }
+  .qr-overlay.open { display: flex; }
+  .qr-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 24px; padding: 32px; width: 100%; max-width: 340px;
+    text-align: center; animation: fadeIn 0.2s ease;
+  }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.96);
+    z-index: 400; display: none; flex-direction: column; justify-content: center;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox-close { position: absolute; top: 50px; right: 20px; background: none; border: none; color: var(--text); font-size: 28px; cursor: pointer; z-index: 10; }
+  .lightbox img { width: 100%; max-height: 65vh; object-fit: contain; }
+  .lightbox-meta { padding: 20px; text-align: center; }
+  .lightbox-caption { color: var(--text); font-style: italic; font-size: 16px; margin-bottom: 4px; }
+  .lightbox-name { color: var(--muted); font-size: 13px; }
+
+  /* Gallery grid */
+  .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
+  .gallery-thumb { aspect-ratio: 1; overflow: hidden; background: var(--card); cursor: pointer; }
+  .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
+  .gallery-thumb:hover img { transform: scale(1.05); }
+  .gallery-video-thumb { aspect-ratio: 1; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 32px; cursor: pointer; }
+
+  /* Drop zone */
+  .dropzone {
+    border: 2px dashed var(--border); border-radius: 16px;
+    padding: 36px 20px; text-align: center; cursor: pointer;
+    margin-bottom: 18px; transition: all 0.2s; background: var(--surface);
+  }
+  .dropzone:hover, .dropzone.dragover { border-color: var(--gold); background: rgba(232,201,122,0.05); }
+  .dropzone.has-files { border-color: var(--gold); background: rgba(232,201,122,0.06); }
+
+  /* Preview strip */
+  .preview-strip { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 18px; padding-bottom: 4px; }
+  .preview-thumb { position: relative; flex-shrink: 0; }
+  .preview-thumb img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; }
+  .preview-remove { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--danger); border: none; color: #fff; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  /* Progress bar */
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.1s; }
+
+  /* Success screen */
+  .success-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px; text-align: center; }
+
+  /* Empty state */
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; text-align: center; gap: 10px; }
+
+  /* Role switcher pill */
+  .role-pill {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 30px; padding: 8px 18px;
+    display: flex; gap: 10px; align-items: center;
+    z-index: 500; white-space: nowrap;
+  }
+  .role-btn { padding: 5px 14px; border-radius: 20px; border: none; font-size: 12px; cursor: pointer; font-weight: 700; transition: all 0.15s; }
+  .role-btn.active { background: var(--gold); color: #0d0d1a; }
+  .role-btn.inactive { background: var(--card); color: var(--muted); }
+
+  /* Type chips */
+  .type-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .type-chip { padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .type-chip.active { background: var(--gold); border-color: var(--gold); color: #0d0d1a; font-weight: 700; }
+
+  /* Login extras */
+  .demo-box { background: rgba(232,201,122,0.08); border: 1px solid rgba(232,201,122,0.25); border-radius: 10px; padding: 12px 14px; margin-top: 20px; text-align: center; }
+  .demo-label { color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; }
+  .demo-creds { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <!-- ── LOGIN ─────────────────────────────────────────────────────────────── -->
+  <div id="screen-login" class="screen active">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:28px;">
+      <div style="text-align:center;margin-bottom:40px;">
+        <div class="display" style="font-size:52px;color:var(--gold);line-height:1;">Memora</div>
+        <div style="color:var(--muted);font-size:14px;margin-top:6px;letter-spacing:0.5px;">Capture every moment, together</div>
+      </div>
+      <div style="background:var(--surface);border-radius:20px;padding:24px;border:1px solid var(--border);">
+        <div class="display" style="font-size:22px;color:var(--text);margin-bottom:20px;" id="login-heading">Welcome back</div>
+        <label class="label">Email</label>
+        <input id="login-email" class="input field" type="email" value="demo@memora.app" placeholder="you@example.com"/>
+        <label class="label" style="margin-top:4px;">Password</label>
+        <input id="login-password" class="input field" type="password" value="demo1234" placeholder="••••••••" style="margin-top:6px;margin-bottom:20px;"/>
+        <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+        <div onclick="toggleMode()" style="color:var(--accent);text-align:center;margin-top:16px;font-size:14px;cursor:pointer;" id="mode-toggle">No account? Sign up</div>
+        <div class="demo-box">
+          <div class="demo-label">DEMO CREDENTIALS</div>
+          <div class="demo-creds">demo@memora.app / demo1234</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD ──────────────────────────────────────────────────────────── -->
+  <div id="screen-dashboard" class="screen">
+    <div class="header">
+      <div class="header-row">
+        <div>
+          <div class="logo">Memora</div>
+          <div class="logo-sub">Organiser Dashboard</div>
+        </div>
+        <button onclick="doSignOut()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;" title="Sign out">⎋</button>
+      </div>
+    </div>
+    <div class="scroll-content" id="events-list"></div>
+    <button class="fab" onclick="openCreateModal()">+</button>
+    <div class="role-pill">
+      <span style="color:var(--muted);font-size:12px;">View as:</span>
+      <button class="role-btn active" onclick="switchRole('organiser')">Organiser</button>
+      <button class="role-btn inactive" onclick="switchRole('guest')">Guest</button>
+    </div>
+  </div>
+
+  <!-- ── GALLERY (ORGANISER) ────────────────────────────────────────────────── -->
+  <div id="screen-gallery" class="screen">
+    <div class="header">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button onclick="goTo('dashboard')" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">←</button>
+        <div>
+          <div class="display" style="color:var(--gold);font-size:20px;" id="gallery-title">Event Name</div>
+          <div style="color:var(--muted);font-size:12px;" id="gallery-count">0 memories</div>
+        </div>
+      </div>
+    </div>
+    <div id="gallery-grid-container" style="flex:1;overflow-y:auto;"></div>
+    <div class="role-pill">
+      <span style="color:var(--muted);font-size:12px;">View as:</span>
+      <button class="role-btn active" onclick="switchRole('organiser')">Organiser</button>
+      <button class="role-btn inactive" onclick="switchRole('guest')">Guest</button>
+    </div>
+  </div>
+
+  <!-- ── GUEST SCREEN ───────────────────────────────────────────────────────── -->
+  <div id="screen-guest" class="screen">
+    <div class="header">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <button onclick="goTo('dashboard')" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">←</button>
+        <span class="badge" id="guest-badge">Wedding</span>
+      </div>
+      <div class="display" style="font-size:24px;color:var(--gold);" id="guest-event-name">Event</div>
+      <div style="color:var(--muted);font-size:13px;" id="guest-event-date">Date</div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" id="tab-upload" onclick="switchTab('upload')">📤 Share Memories</button>
+      <button class="tab" id="tab-gallery" onclick="switchTab('gallery')">🖼 Gallery</button>
+    </div>
+    <!-- Upload panel -->
+    <div id="panel-upload" style="flex:1;overflow-y:auto;padding:20px;padding-bottom:100px;">
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <input type="file" id="file-input" multiple accept="image/*,video/*" style="display:none;" onchange="handleFileSelect(event)"/>
+        <div style="font-size:40px;margin-bottom:10px;" id="dropzone-icon">📷</div>
+        <div style="color:var(--text);" id="dropzone-text">Tap to add photos & videos</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px;" id="dropzone-sub">or drag & drop</div>
+      </div>
+      <div class="preview-strip" id="preview-strip" style="display:none;"></div>
+      <div class="field">
+        <label class="label">Your Name (optional)</label>
+        <input class="input" id="guest-name-input" type="text" placeholder="e.g. Aunt Margaret"/>
+      </div>
+      <div class="field">
+        <label class="label">Caption (optional)</label>
+        <textarea class="input" id="caption-input" placeholder="Share a memory or message…"></textarea>
+      </div>
+      <div class="progress-bar" id="upload-progress-bar" style="display:none;">
+        <div class="progress-fill" id="upload-progress-fill" style="width:0%"></div>
+      </div>
+      <button class="btn btn-primary btn-full" id="upload-btn" onclick="doUpload()" disabled style="opacity:0.4;">Share Memories ✨</button>
+    </div>
+    <!-- Gallery panel -->
+    <div id="panel-gallery" style="display:none;flex:1;overflow-y:auto;"></div>
+    <div class="role-pill">
+      <span style="color:var(--muted);font-size:12px;">View as:</span>
+      <button class="role-btn inactive" onclick="switchRole('organiser')">Organiser</button>
+      <button class="role-btn active" onclick="switchRole('guest')">Guest</button>
+    </div>
+  </div>
+
+  <!-- ── SUCCESS SCREEN ────────────────────────────────────────────────────── -->
+  <div id="screen-success" class="screen">
+    <div class="success-screen">
+      <div style="font-size:64px;margin-bottom:16px;">✨</div>
+      <div class="display" style="font-size:34px;color:var(--gold);margin-bottom:8px;">Thank you!</div>
+      <div style="color:var(--muted);line-height:1.6;margin-bottom:32px;" id="success-msg">Your memories have been shared.</div>
+      <div style="display:flex;gap:12px;">
+        <button class="btn btn-primary" onclick="uploadMore()">Upload More</button>
+        <button class="btn btn-ghost" onclick="viewGalleryAfterSuccess()">View Gallery</button>
+      </div>
+    </div>
+    <div class="role-pill">
+      <span style="color:var(--muted);font-size:12px;">View as:</span>
+      <button class="role-btn inactive" onclick="switchRole('organiser')">Organiser</button>
+      <button class="role-btn active" onclick="switchRole('guest')">Guest</button>
+    </div>
+  </div>
+
+  <!-- ── CREATE MODAL ───────────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="create-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">New Event</div>
+        <button class="modal-close" onclick="closeCreateModal()">✕</button>
+      </div>
+      <div class="field">
+        <label class="label">Event Name *</label>
+        <input class="input" id="new-event-name" type="text" placeholder="e.g. Emma & Tom's Wedding"/>
+      </div>
+      <div class="field">
+        <label class="label">Event Type</label>
+        <div class="type-grid" id="type-grid"></div>
+      </div>
+      <div class="field">
+        <label class="label">Date *</label>
+        <input class="input" id="new-event-date" type="date"/>
+      </div>
+      <div class="field">
+        <label class="label">Description</label>
+        <textarea class="input" id="new-event-desc" placeholder="A short note about the event…"></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="createEvent()" style="margin-top:8px;">Create Event</button>
+    </div>
+  </div>
+
+  <!-- ── QR MODAL ───────────────────────────────────────────────────────────── -->
+  <div class="qr-overlay" id="qr-modal">
+    <div class="qr-card">
+      <div class="display" style="color:var(--gold);font-size:22px;margin-bottom:4px;" id="qr-event-name">Event</div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:24px;">Guests scan this to share memories</div>
+      <div style="display:flex;justify-content:center;margin-bottom:16px;">
+        <div style="background:var(--card);padding:16px;border-radius:16px;">
+          <img id="qr-image" src="" width="180" height="180" style="border-radius:8px;display:block;" alt="QR Code"/>
+        </div>
+      </div>
+      <div style="color:var(--muted);font-size:11px;margin-bottom:24px;word-break:break-all;user-select:all;" id="qr-url"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="closeQRModal()" style="flex:1;">Close</button>
+        <button class="btn btn-primary" onclick="previewGuest()" style="flex:1;">Preview Guest View</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LIGHTBOX ───────────────────────────────────────────────────────────── -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt=""/>
+    <div class="lightbox-meta">
+      <div class="lightbox-caption" id="lightbox-caption"></div>
+      <div class="lightbox-name" id="lightbox-name"></div>
+      <button class="btn-danger" id="lightbox-delete-btn" onclick="deleteFromLightbox()" style="margin-top:14px;">🗑 Remove</button>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2,8);
+const formatDate = d => new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+const timeAgo = ts => { const m=Math.floor((Date.now()-ts)/60000); if(m<2)return'just now'; if(m<60)return m+'m ago'; const h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; };
+
+const SAMPLE_PHOTOS = [
+  {url:'https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=400&q=80', guestName:'Aunt Margaret', caption:'Such a beautiful day!'},
+  {url:'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&q=80', guestName:'Tom B.', caption:'Congratulations you two 🥂'},
+  {url:'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=400&q=80', guestName:'Claire', caption:''},
+  {url:'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=400&q=80', guestName:'James R.', caption:'First dance 💃'},
+  {url:'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80', guestName:'Sophie', caption:'The cake!'},
+  {url:'https://images.unsplash.com/photo-1469371670807-013ccf25f16a?w=400&q=80', guestName:'Dev & Priya', caption:'So happy for you both'},
+];
+
+const now = Date.now();
+let events = [
+  { id:'evt1', name:"Sarah & James Wedding", type:"Wedding", date:"2026-06-14", description:"A celebration of love at Thornfield Manor",
+    media: SAMPLE_PHOTOS.map((p,i)=>({id:uid(),...p,mediaType:'image',uploadedAt:now-(6-i)*600000})) },
+  { id:'evt2', name:"Grandma Rose's 80th", type:"Birthday", date:"2026-05-22", description:"A milestone birthday celebration", media:[] },
+  { id:'evt3', name:"Thomas Hargreaves", type:"Funeral", date:"2026-04-10", description:"A service of remembrance", media:[] },
+];
+
+let currentEvent = null;
+let pickedFiles = [];
+let lightboxItem = null;
+let lightboxIsOrganiser = false;
+const EVENT_TYPES = ["Wedding","Funeral","Birthday","Graduation","Retirement","Anniversary","Christening","Other"];
+let selectedType = "Wedding";
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-'+screenId).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+let loginMode = 'login';
+function toggleMode() {
+  loginMode = loginMode==='login'?'signup':'login';
+  document.getElementById('login-heading').textContent = loginMode==='login'?'Welcome back':'Create account';
+  document.getElementById('mode-toggle').textContent = loginMode==='login'?'No account? Sign up':'Already have an account? Sign in';
+}
+function doLogin() {
+  const btn = event.target;
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  setTimeout(()=>{ renderDashboard(); goTo('dashboard'); }, 900);
+}
+function doSignOut() {
+  goTo('login');
+  document.querySelector('#screen-login button.btn-primary').textContent = 'Sign In';
+  document.querySelector('#screen-login button.btn-primary').disabled = false;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const list = document.getElementById('events-list');
+  if (!events.length) {
+    list.innerHTML = `<div class="empty-state"><div style="font-size:52px">🎉</div><div class="display" style="font-size:18px;color:var(--text)">No events yet</div><div style="color:var(--muted)">Tap + to create your first event</div></div>`;
+    return;
+  }
+  list.innerHTML = events.map(ev => `
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <span class="badge">${ev.type}</span>
+        <span style="color:var(--muted);font-size:12px;">${formatDate(ev.date)}</span>
+      </div>
+      <div class="display" style="font-size:20px;color:var(--text);margin-bottom:4px;">${ev.name}</div>
+      ${ev.description?`<div style="color:var(--muted);font-size:13px;margin-bottom:8px;">${ev.description}</div>`:''}
+      <div style="color:var(--accent);font-size:13px;">📎 ${ev.media.length} memor${ev.media.length===1?'y':'ies'}</div>
+      <div class="action-row">
+        <button class="btn btn-ghost btn-sm" onclick="showQR('${ev.id}')">🔲 QR Code</button>
+        <button class="btn btn-ghost btn-sm" onclick="openGallery('${ev.id}')">🖼 Gallery</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Create Event ──────────────────────────────────────────────────────────────
+function openCreateModal() {
+  selectedType = 'Wedding';
+  renderTypeGrid();
+  document.getElementById('new-event-name').value = '';
+  document.getElementById('new-event-date').value = '';
+  document.getElementById('new-event-desc').value = '';
+  document.getElementById('create-modal').classList.add('open');
+}
+function closeCreateModal() { document.getElementById('create-modal').classList.remove('open'); }
+function renderTypeGrid() {
+  document.getElementById('type-grid').innerHTML = EVENT_TYPES.map(t =>
+    `<button class="type-chip ${t===selectedType?'active':''}" onclick="selectType('${t}')">${t}</button>`
+  ).join('');
+}
+function selectType(t) { selectedType=t; renderTypeGrid(); }
+function createEvent() {
+  const name = document.getElementById('new-event-name').value.trim();
+  const date = document.getElementById('new-event-date').value;
+  if (!name||!date) { alert('Please fill in the event name and date.'); return; }
+  events.unshift({ id:uid(), name, type:selectedType, date, description:document.getElementById('new-event-desc').value.trim(), media:[] });
+  closeCreateModal();
+  renderDashboard();
+}
+
+// ── QR Modal ──────────────────────────────────────────────────────────────────
+function showQR(eventId) {
+  currentEvent = events.find(e=>e.id===eventId);
+  const url = `https://memora.app/event/${eventId}`;
+  document.getElementById('qr-event-name').textContent = currentEvent.name;
+  document.getElementById('qr-url').textContent = url;
+  document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}&bgcolor=1a1a35&color=e8c97a&qzone=2`;
+  document.getElementById('qr-modal').classList.add('open');
+}
+function closeQRModal() { document.getElementById('qr-modal').classList.remove('open'); }
+function previewGuest() { closeQRModal(); openGuestScreen(currentEvent.id); }
+
+// ── Organiser Gallery ─────────────────────────────────────────────────────────
+function openGallery(eventId) {
+  currentEvent = events.find(e=>e.id===eventId);
+  document.getElementById('gallery-title').textContent = currentEvent.name;
+  renderOrgGallery();
+  goTo('gallery');
+}
+function renderOrgGallery() {
+  const count = currentEvent.media.length;
+  document.getElementById('gallery-count').textContent = count+' memor'+(count===1?'y':'ies');
+  const container = document.getElementById('gallery-grid-container');
+  if (!count) {
+    container.innerHTML = `<div class="empty-state"><div style="font-size:48px">📭</div><div style="color:var(--muted);margin-top:8px;">No memories yet — share the QR code!</div></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="gallery-grid">${currentEvent.media.map(m=>`
+    <div class="gallery-thumb" onclick="openLightbox('${m.id}',true)">
+      <img src="${m.url}" loading="lazy" alt="${m.caption||''}"/>
+    </div>`).join('')}</div>`;
+}
+
+// ── Guest Screen ──────────────────────────────────────────────────────────────
+function openGuestScreen(eventId) {
+  currentEvent = events.find(e=>e.id===eventId);
+  document.getElementById('guest-badge').textContent = currentEvent.type;
+  document.getElementById('guest-event-name').textContent = currentEvent.name;
+  document.getElementById('guest-event-date').textContent = formatDate(currentEvent.date);
+  document.getElementById('tab-gallery').textContent = `🖼 Gallery (${currentEvent.media.length})`;
+  pickedFiles = [];
+  renderPreviewStrip();
+  document.getElementById('guest-name-input').value = '';
+  document.getElementById('caption-input').value = '';
+  document.getElementById('upload-btn').disabled = true;
+  document.getElementById('upload-btn').style.opacity = '0.4';
+  document.getElementById('upload-progress-bar').style.display = 'none';
+  switchTab('upload');
+  goTo('guest');
+}
+
+function switchTab(tab) {
+  document.getElementById('panel-upload').style.display = tab==='upload'?'block':'none';
+  document.getElementById('panel-gallery').style.display = tab==='gallery'?'block':'none';
+  document.getElementById('tab-upload').classList.toggle('active', tab==='upload');
+  document.getElementById('tab-gallery').classList.toggle('active', tab==='gallery');
+  if (tab==='gallery') renderGuestGallery();
+}
+
+function renderGuestGallery() {
+  const panel = document.getElementById('panel-gallery');
+  const media = currentEvent.media;
+  if (!media.length) {
+    panel.innerHTML = `<div class="empty-state"><div style="font-size:48px">📭</div><div style="color:var(--muted);margin-top:8px;">No memories yet — be the first!</div></div>`;
+    return;
+  }
+  panel.innerHTML = `<div class="gallery-grid" style="padding-bottom:100px;">${media.map(m=>`
+    <div class="gallery-thumb" onclick="openLightbox('${m.id}',false)">
+      <img src="${m.url}" loading="lazy" alt=""/>
+    </div>`).join('')}</div>`;
+}
+
+// ── File picking ──────────────────────────────────────────────────────────────
+function handleFileSelect(e) { addFiles(Array.from(e.target.files)); }
+function handleDragOver(e) { e.preventDefault(); document.getElementById('dropzone').classList.add('dragover'); }
+function handleDragLeave() { document.getElementById('dropzone').classList.remove('dragover'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('dragover');
+  addFiles(Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/')));
+}
+function addFiles(files) {
+  files.forEach(f => pickedFiles.push({ file:f, url:URL.createObjectURL(f) }));
+  renderPreviewStrip();
+  updateUploadBtn();
+}
+function removeFile(i) {
+  pickedFiles.splice(i,1);
+  renderPreviewStrip();
+  updateUploadBtn();
+}
+function renderPreviewStrip() {
+  const strip = document.getElementById('preview-strip');
+  const dz = document.getElementById('dropzone');
+  if (!pickedFiles.length) {
+    strip.style.display = 'none';
+    dz.classList.remove('has-files');
+    document.getElementById('dropzone-icon').textContent = '📷';
+    document.getElementById('dropzone-text').textContent = 'Tap to add photos & videos';
+    document.getElementById('dropzone-sub').textContent = 'or drag & drop';
+    return;
+  }
+  dz.classList.add('has-files');
+  document.getElementById('dropzone-icon').textContent = '📎';
+  document.getElementById('dropzone-text').textContent = pickedFiles.length+' file'+(pickedFiles.length>1?'s':'')+' selected';
+  document.getElementById('dropzone-sub').textContent = 'Tap to add more';
+  strip.style.display = 'flex';
+  strip.innerHTML = pickedFiles.map((p,i)=>`
+    <div class="preview-thumb">
+      <img src="${p.url}" alt=""/>
+      <button class="preview-remove" onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+}
+function updateUploadBtn() {
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = !pickedFiles.length;
+  btn.style.opacity = pickedFiles.length?'1':'0.4';
+}
+
+// ── Upload ─────────────────────────────────────────────────────────────────────
+function doUpload() {
+  if (!pickedFiles.length) return;
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true; btn.textContent = 'Uploading… 0%';
+  const bar = document.getElementById('upload-progress-bar');
+  const fill = document.getElementById('upload-progress-fill');
+  bar.style.display = 'block';
+  let p = 0;
+  const iv = setInterval(()=>{
+    p = Math.min(p+11, 100);
+    fill.style.width = p+'%';
+    btn.textContent = `Uploading… ${p}%`;
+    if (p>=100) {
+      clearInterval(iv);
+      const guestName = document.getElementById('guest-name-input').value.trim() || 'Anonymous';
+      const caption = document.getElementById('caption-input').value.trim();
+      pickedFiles.forEach(({url})=>{
+        currentEvent.media.unshift({ id:uid(), guestName, caption, mediaType:'image', url, uploadedAt:Date.now() });
+      });
+      document.getElementById('tab-gallery').textContent = `🖼 Gallery (${currentEvent.media.length})`;
+      document.getElementById('success-msg').textContent = `Your memories have been shared with ${currentEvent.name}.`;
+      pickedFiles=[];
+      renderPreviewStrip();
+      updateUploadBtn();
+      bar.style.display='none';
+      btn.textContent='Share Memories ✨';
+      btn.disabled=false; btn.style.opacity='0.4';
+      goTo('success');
+    }
+  }, 120);
+}
+function uploadMore() { openGuestScreen(currentEvent.id); }
+function viewGalleryAfterSuccess() { openGuestScreen(currentEvent.id); setTimeout(()=>switchTab('gallery'),50); }
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+function openLightbox(mediaId, isOrganiser) {
+  lightboxItem = currentEvent.media.find(m=>m.id===mediaId);
+  lightboxIsOrganiser = isOrganiser;
+  if (!lightboxItem) return;
+  document.getElementById('lightbox-img').src = lightboxItem.url;
+  document.getElementById('lightbox-caption').textContent = lightboxItem.caption ? `"${lightboxItem.caption}"` : '';
+  document.getElementById('lightbox-name').textContent = `— ${lightboxItem.guestName} · ${timeAgo(lightboxItem.uploadedAt)}`;
+  document.getElementById('lightbox-delete-btn').style.display = isOrganiser?'inline-block':'none';
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+function deleteFromLightbox() {
+  if (!lightboxItem||!lightboxIsOrganiser) return;
+  if (confirm('Remove this memory?')) {
+    currentEvent.media = currentEvent.media.filter(m=>m.id!==lightboxItem.id);
+    closeLightbox();
+    renderOrgGallery();
+    renderDashboard();
+  }
+}
+
+// ── Role switcher ─────────────────────────────────────────────────────────────
+function switchRole(role) {
+  if (role==='guest') {
+    const ev = currentEvent || events[0];
+    if (ev) openGuestScreen(ev.id);
+  } else {
+    renderDashboard();
+    goTo('dashboard');
+  }
+}
+
+// ── Init type grid ─────────────────────────────────────────────────────────────
+renderTypeGrid();
+</script>
+</body>
+</html>
